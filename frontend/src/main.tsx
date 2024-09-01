@@ -7,8 +7,8 @@ import {
   RouterProvider,
 } from "react-router-dom";
 import { ClerkProvider } from '@clerk/clerk-react'
-import Repl, { loader } from './routes/repl.tsx';
 import Dashboard from './routes/home.tsx';
+import Repl, { loader } from './routes/repl.tsx';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -22,7 +22,7 @@ const router = createBrowserRouter([
     element: <Dashboard/>
   },
   {
-    path: "/repl/:replID",
+    path: "/repl/:replID/:type",
     element: <Repl/>,
     loader: loader
   }
