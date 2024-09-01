@@ -4,22 +4,24 @@ import path from "path";
 export const createDir = async (name: string) => {
   try {
     const createdDir = await fs.mkdir(`./user-files/${name}`);
-    return ['success', readDir(`./user-files/${name}`)]
+    return 'success'
   } catch (error: any) {
     return error.code
   }
 };
 
 export const copyDir = async (fileType: string, name: string) => {
+  // checks if the dir has multiple files and copy the files to the required location
+  // fileType: node/python, name: name of the folder in which the base image will be copied to
     try {
-        const copyData: string[] | undefined = await readDir(`./base/${fileType}`)
+        const copyData: {file: string, fileType: string}[] | undefined = await readDir(`./base/${fileType}`)
         if (copyData && copyData?.length > 1) {
             copyData.map(async (path) => {
-                await fs.copyFile(`./base/${fileType}/${path}`, `./user-files/${name}/${path}`)
+                await fs.copyFile(`./base/${fileType}/${path.file}`, `./user-files/${name}/${path.file}`)
             })
             await readDir('./user-files')
-        } else {
-            await fs.copyFile(`./base/${fileType}/${copyData}`, `./user-files/${name}/${copyData}`)
+        } else if (copyData) {
+            await fs.copyFile(`./base/${fileType}/${copyData[0].file}`, `./user-files/${name}/${copyData[0].file}`)
             await readDir('./user-files')
         }
     } catch (error: any) {
@@ -27,13 +29,19 @@ export const copyDir = async (fileType: string, name: string) => {
     }
 }
 
-export const readDir = async (path: string): Promise<string[] | undefined> => {
+export const readDir = async (path: string): Promise<{file: string, fileType: string}[] | undefined> => {
+  // returns all the files/folders in the given location in the
+  // form of an array: {file: file name(index.js, main.py etc..), fileType: file/dir}
   try {
-    console.log(path);
-    const dirContent = await fs.readdir(path);
+    const files = await fs.readdir(path);
+    const dirContent: {file: string, fileType: string}[] = []
+    await Promise.all(files.map(async (file) => {
+        const fileType = (await fs.stat(`${path}/${file}`)).isFile() ? 'file' : 'dir'
+        dirContent.push({file, fileType})
+    }))
     return dirContent;
   } catch (error) {
-    console.log(error, "in dir");
+    console.log(error);
     return undefined
   }
 };
@@ -50,7 +58,7 @@ export const readFile = async (path: string) => {
 export const updateFile = async (path: string, data: string) => {
   try {
     const writeFile = await fs.writeFile(path, data);
-    readFile(path);
+    return readFile(path);
   } catch (error) {
     console.log(error);
   }

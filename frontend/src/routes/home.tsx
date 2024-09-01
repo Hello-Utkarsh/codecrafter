@@ -59,14 +59,17 @@ export default function Dashboard() {
     socket?.emit('create-repl', [replName, replType])
     socket?.on('dir-exist', (is_created) => {
       if (is_created == 'EEXIST') {
+        console.log("in exxist")
         toast("looks like a repl with this name already exist")
         return
+      } else{
+        console.log("some problem occured")
       }
     })
     socket?.on('success-repl-creation', () => {
+      console.log(replName, replType)
       return navigate(`/repl/${replName}/${replType}`)
     })
-    socket?.disconnect()
   }
 
   return (

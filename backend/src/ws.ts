@@ -1,9 +1,8 @@
 import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
-import { copyDir, createDir, readFile } from "./fs";
+import { copyDir, createDir, readDir, readFile, updateFile } from "./fs";
 
 export const initWs = (server: HttpServer) => {
-  console.log("object");
   const io = new Server(server, {
     cors: {
       origin: "*",
@@ -14,19 +13,33 @@ export const initWs = (server: HttpServer) => {
       if (replData) {
         const [name, type] = replData;
         const is_created = await createDir(name);
-        if (is_created[0] != "success") {
+        if (is_created != "success") {
           socket.emit("dir-exist", is_created);
+          return
         }
         await copyDir(type, name);
         socket.emit('success-repl-creation')
+        
       }
     });
-  });
-};
+    socket.on('get-dir', async(name, callback) => {
+        const dir = await readDir(`./user-files/${name}`)
+        callback({
+            dir,
+            status: 'ok'
+        })
+    })
 
-const initHndlr = (socket: Socket, replid: string) => {
-  socket.on("fetchDir", async (dir: any) => {
-    const dirData = await readFile(dir);
-    socket.emit("fetchedDir", dirData);
+    socket.on('code-editor-change', async ({replName, file, code}) => {
+      await updateFile(`./user-files/${replName}/${file}`, code)
+    })
+    socket.on('get-selected-file-code', async ({replName, file}, callback) => {
+      // reading the file content of the selected file from the sidebar
+      const fileContent = await readFile(`./user-files/${replName}/${file}`)
+      callback({
+        status: 'ok',
+        fileContent
+      })
+    })
   });
 };
