@@ -1,6 +1,9 @@
 import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
 import { copyDir, createDir, readDir, readFile, updateFile } from "./fs";
+import {Terminal} from "./pty";
+
+const terminalManager = new Terminal()
 
 export const initWs = (server: HttpServer) => {
   const io = new Server(server, {

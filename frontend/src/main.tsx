@@ -7,8 +7,8 @@ import {
   RouterProvider,
 } from "react-router-dom";
 import { ClerkProvider } from '@clerk/clerk-react'
-import Dashboard from './routes/home.tsx';
-import Repl, { loader } from './routes/repl.tsx';
+import Dashboard from './routes/Dashboard.tsx';
+import Repl from './routes/Repl.tsx';
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
@@ -24,7 +24,7 @@ const router = createBrowserRouter([
   {
     path: "/repl/:replID/:type",
     element: <Repl/>,
-    loader: loader
+    loader: ({ params }: any) => {return [params.replID, params.type]}
   }
 ]);
 

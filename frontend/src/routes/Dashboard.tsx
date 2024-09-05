@@ -59,7 +59,6 @@ export default function Dashboard() {
     socket?.emit('create-repl', [replName, replType])
     socket?.on('dir-exist', (is_created) => {
       if (is_created == 'EEXIST') {
-        console.log("in exxist")
         toast("looks like a repl with this name already exist")
         return
       } else{
