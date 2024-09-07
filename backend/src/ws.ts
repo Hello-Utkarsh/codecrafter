@@ -1,9 +1,9 @@
 import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
 import { copyDir, createDir, readDir, readFile, updateFile } from "./fs";
-import {Terminal} from "./pty";
+import { Terminal } from "./pty";
 
-const terminalManager = new Terminal()
+const terminalManager = new Terminal();
 
 export const initWs = (server: HttpServer) => {
   const io = new Server(server, {
@@ -18,31 +18,44 @@ export const initWs = (server: HttpServer) => {
         const is_created = await createDir(name);
         if (is_created != "success") {
           socket.emit("dir-exist", is_created);
-          return
+          return;
         }
         await copyDir(type, name);
-        socket.emit('success-repl-creation')
-        
+        socket.emit("success-repl-creation");
       }
     });
-    socket.on('get-dir', async(name, callback) => {
-        const dir = await readDir(`./user-files/${name}`)
-        callback({
-            dir,
-            status: 'ok'
-        })
-    })
-
-    socket.on('code-editor-change', async ({replName, file, code}) => {
-      await updateFile(`./user-files/${replName}/${file}`, code)
-    })
-    socket.on('get-selected-file-code', async ({replName, file}, callback) => {
-      // reading the file content of the selected file from the sidebar
-      const fileContent = await readFile(`./user-files/${replName}/${file}`)
+    socket.on("get-dir", async (name, callback) => {
+      const dir = await readDir(`./user-files/${name}`);
       callback({
-        status: 'ok',
-        fileContent
-      })
-    })
+        dir,
+        status: "ok",
+      });
+    });
+
+    socket.on("code-editor-change", async ({ replName, file, code }) => {
+      await updateFile(`./user-files/${replName}/${file}`, code);
+    });
+
+    socket.on(
+      "get-selected-file-code",
+      async ({ replName, file }, callback) => {
+        // reading the file content of the selected file from the sidebar
+        const fileContent = await readFile(`./user-files/${replName}/${file}`);
+        callback({
+          status: "ok",
+          fileContent,
+        });
+      }
+    );
+
+    socket.on("requestTerminal", async (dir) => {
+      terminalManager.createPty("abc", `./user-files/${dir}/`, (data: any, id: any) => {
+        socket.emit('terminal-response', data)
+      });
+    });
+
+    socket.on("terminal-exec", async (command: string, replData: string[]) => {
+      terminalManager.writePty("abc", command);
+    });
   });
 };

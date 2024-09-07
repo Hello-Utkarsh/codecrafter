@@ -5,21 +5,22 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-reac
 import { io } from "socket.io-client";
 import { Socket } from 'node_modules/socket.io-client/build/cjs';
 import { Button } from '@/components/ui/button';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import '@xterm/xterm/css/xterm.css'
+import TerminalComponent from '@/components/TerminalComp';
 
 export default function Repl() {
     const languages: any = { 'js': 'javascript', 'py': 'python' }
-    const [fileName, setFileName] = useState('script.js');
     const [defaultCode, setDefaultCode] = useState('')
     const [files, setFile] = useState(new Map<string, { extension: string; type: string }>())
     const [selectedFile, selectFile] = useState<string[]>([])
-    const terminalRef: any = useRef()
-    let debounceValue = ''
 
     const [socket, setSocket] = useState<Socket | null>(null)
     const replData: any = useLoaderData()
+
+    useEffect(() => {
+        const newSocket: any = io('http://localhost:3000')
+        setSocket(newSocket)
+        getDir(newSocket)
+    }, [])
 
     const getDir = async (newSocket: Socket) => {
         if (newSocket) {
@@ -68,35 +69,6 @@ export default function Repl() {
 
     const callDebounce = debounce((text: any) => { socket?.emit('code-editor-change', { replName: replData[0], file: selectedFile[1], code: text }) })
 
-    useEffect(() => {
-        const newSocket: any = io('http://localhost:3000')
-        if (!terminalRef.current) {
-            return
-        }
-        const fitAddon = new FitAddon();
-        const term = new Terminal({
-            cursorBlink: true,
-            cols: 120,
-            rows: 120
-        });
-        term.loadAddon(fitAddon);
-        term.open(terminalRef.current);
-        fitAddon.fit();
-        term.onData(key => {
-            console.log(key)
-        })
-        term.onData((key) => {
-            console.log(key);
-            term.write(key);
-            if (key == '')
-                // console.log('entered')
-                term.write('\n');
-        })
-        setSocket(newSocket)
-        getDir(newSocket)
-    }, [])
-
-
     return (
         <div className='flex flex-col py-4'>
             <div className='flex justify-between items-center px-6 my-2'>
@@ -131,7 +103,7 @@ export default function Repl() {
                     })}
                 </div>
                 <Editor
-                    theme='vs-dark' height='80vh' width='48vw'
+                    theme='vs-dark' height='80vh' width='40vw'
                     path={selectedFile[1]}
                     defaultLanguage={selectedFile[0]}
                     defaultValue={""}
@@ -141,15 +113,8 @@ export default function Repl() {
                         callDebounce(value)
                     }}
                 />
-                <div className='w-4/12 mx-2 bg-[#1e1e1e] px-4 py-2'>
-                    <p className='text-sm'>&gt;&#95; Console</p>
-                    <div className='w-auto h-96 text-white' ref={terminalRef}></div>
-                </div>
+                <TerminalComponent newSocket={socket} replData = {replData}/>
             </div>
         </div>
     )
 }
-
-// export function loader({ params }: any) {
-//     return [params.replID, params.type]
-// }

@@ -6,21 +6,31 @@ export class Terminal {
     this.sessions = {};
   }
 
-  createPty(id: string, path: string) {
-    const pty = require("pty.js");
+  createPty(
+    id: string,
+    path: string,
+    onData: (data: string, id: string) => void
+  ) {
+    const os = require("os");
+    const pty = require("node-pty");
 
-    const term = pty.spawn("bash", [], {
+    const shell = os.platform() === "win32" ? "powershell.exe" : "bash";
+
+    const ptyProcess = pty.spawn(shell, [], {
       name: "xterm-color",
       cols: 80,
       cwd: path,
     });
 
+    ptyProcess.on("data", (data: string) => onData(data, ptyProcess.pid));
+
     this.sessions[id] = {
-      terminal: term,
+      terminal: ptyProcess,
     };
   }
 
   writePty(id: string, data: string) {
-    this.sessions[id].terminal.write(data);
+    const terminal = this.sessions[id].terminal;
+    terminal.write(data);
   }
 }
