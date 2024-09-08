@@ -34,18 +34,23 @@ export default function TerminalComponent({ newSocket, replData }: {newSocket: S
         newSocket.on('terminal-response', (data: any) => {
             term.write(data)
         })
-        term.onData(key => {
-            term.write(key);
-            if (key == '\r') {
-                console.log(command)
+        term.onKey((key, ev): any => {
+            term.write(key.key);
+            if (key.domEvent.key == 'Backspace') {
                 newSocket?.emit('terminal-exec', `${command}\r`, replData)
+                term.write('\b \b')
+                command = ''
+                command += command.slice(0,command.length-2)
+                return
+            }
+            if (key.key == '\r') {
+                newSocket?.emit('terminal-exec', `${command}\r`, replData)
+                console.log(command)
                 term.write('\n')
-                term.clear()
                 command = ''
                 return
             }
-            command += key
-            console.log(key)
+            command += key.key
             return () => {
                 newSocket.off("terminal")
             }

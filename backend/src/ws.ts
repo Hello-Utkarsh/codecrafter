@@ -4,6 +4,7 @@ import { copyDir, createDir, readDir, readFile, updateFile } from "./fs";
 import { Terminal } from "./pty";
 
 const terminalManager = new Terminal();
+let currentDir = ''
 
 export const initWs = (server: HttpServer) => {
   const io = new Server(server, {
@@ -11,6 +12,7 @@ export const initWs = (server: HttpServer) => {
       origin: "*",
     },
   });
+
   io.on("connection", async (socket: Socket) => {
     socket.on("create-repl", async (replData) => {
       if (replData) {
@@ -24,7 +26,9 @@ export const initWs = (server: HttpServer) => {
         socket.emit("success-repl-creation");
       }
     });
+
     socket.on("get-dir", async (name, callback) => {
+      currentDir = name
       const dir = await readDir(`./user-files/${name}`);
       callback({
         dir,
@@ -35,6 +39,20 @@ export const initWs = (server: HttpServer) => {
     socket.on("code-editor-change", async ({ replName, file, code }) => {
       await updateFile(`./user-files/${replName}/${file}`, code);
     });
+
+    socket.on('get-selected-dir', async({replName, dir}, callback) => {
+      try {
+        const dirContent = await readDir(`./user-files/${replName}/${dir}`)
+        callback({
+          status: 'ok',
+          dirContent
+        })
+      } catch (error) {
+        callback({
+          status: '404'
+        })
+      }
+    })
 
     socket.on(
       "get-selected-file-code",
@@ -49,8 +67,10 @@ export const initWs = (server: HttpServer) => {
     );
 
     socket.on("requestTerminal", async (dir) => {
-      terminalManager.createPty("abc", `./user-files/${dir}/`, (data: any, id: any) => {
+      terminalManager.createPty("abc", `./user-files/${dir}/`, async (data: any, id: any) => {
         socket.emit('terminal-response', data)
+        const dirContent = await readDir(`./user-files/${currentDir}/`)
+        socket.emit('dir-change', dirContent)
       });
     });
 
