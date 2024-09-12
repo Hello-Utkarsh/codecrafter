@@ -8,95 +8,79 @@ import { Button } from '@/components/ui/button';
 import TerminalComponent from '@/components/TerminalComp';
 
 export default function Repl() {
-    const languages: any = { 'js': 'javascript', 'py': 'python', 'json': 'json' }
+    const languages: any = { '.js': 'javascript', '.py': 'python', '.json': 'json' }
     const [defaultCode, setDefaultCode] = useState('')
+    const [searchDir, setSearchDir] = useState<string[]>([])
     // all the fetched files of the repl
-    const [files, setFile] = useState(new Map<string, { extension: string; type: string, children?: string[], status?: string }>())
+    const [files, setFile]: any = useState([])
+    const [sidebarDir, setSideBar]: any = useState()
     const [selectedFile, selectFile] = useState<string[]>([])
-    const currentDir = []
 
     const [socket, setSocket] = useState<Socket | null>(null)
     const replData: any = useLoaderData()
 
     useEffect(() => {
         const newSocket: any = io('http://localhost:3000')
-        newSocket.on('dir-change', (dir: any) => {
-            const updatedFiles = new Map(files);
-            dir.forEach((file: any) => {
-                if (!updatedFiles.has(file.file)) {
-                    updatedFiles.set(file.file, {
-                        extension: languages[file.file.split('.')[1]],
-                        type: file.fileType,
-                    });
-                }
-            });
-            setFile(updatedFiles);
-        })
+        // newSocket.on('dir-change', (dir: any) => {
+        //     const updatedFiles = new Map(files);
+        //     dir.forEach((file: any) => {
+        //         if (!updatedFiles.has(file.file)) {
+        //             updatedFiles.set(file.file, {
+        //                 extension: languages[file.file.split('.')[1]],
+        //                 type: file.fileType,
+        //             });
+        //         }
+        //     });
+        //     setFile(updatedFiles);
+        // })
         setSocket(newSocket)
         getDir(newSocket)
     }, [])
 
     const getDir = async (newSocket: Socket) => {
         if (newSocket) {
-            newSocket?.emit('get-dir', replData[0], (res: any, err: any) => {
-                if (res.status == 'ok') {
-                    const dir: { file: string, fileType: string }[] = res.dir
-                    const updatedFiles = new Map(files);
-                    dir.forEach((file: any) => {
-                        // if the file type is dir
-                        if (file.fileType == 'dir') {
-                            updatedFiles.set(file.file, {
-                                extension: languages[file.file.split('.')[1]],
-                                type: 'dir',
-                                children: [],
-                                status: 'close'
-                            });
+            newSocket?.emit('get-dir', replData[0], (res: { content: { file: string, fileType: string }[], type: string }, err: any) => {
+                if (files) {
+                    const dummyFiles: any = []
+                    res.content.map((x: { file: string, fileType: string }) => {
+                        if (x.fileType == 'dir') {
+                            dummyFiles[x.file] = { ext: 'dir', status: 'close', children: [] }
+                            return
                         }
-                        // if the file type is file
-                        if (!updatedFiles.has(file.file)) {
-                            updatedFiles.set(file.file, {
-                                extension: languages[file.file.split('.')[1]],
-                                type: file.fileType,
-                            });
-                        }
-                    });
-                    setFile(updatedFiles);
-                    // sets the first file of the fetched directory as selected file
-                    // if (Array.from(updatedFiles.entries())[0][1].type == 'file') {
-                    //     selectFile([Array.from(updatedFiles.entries())[0][1].extension, Array.from(updatedFiles.entries())[0][0]])
-                    //     getSelectedFile(Array.from(updatedFiles.entries())[0][0], newSocket, Array.from(updatedFiles.entries())[0][1].type)
-                    // }
-                } else {
-                    console.log(err)
+                        dummyFiles[x.file] = { ext: x.fileType }
+                    })
+                    setFile(dummyFiles)
+                    getSelectedFile(res.content[0].file, newSocket)
                 }
             })
         }
     }
 
-    const getSelectedFile = async (file: any, socket: Socket, type: string) => {
-        if (socket && file != 'undefined' && type == 'file') {
-            socket.emit('get-selected-file-code', { replName: replData[0], file: file }, (res: { status: string, fileContent: string }, err: any) => {
-                if (res.status == 'ok') {
-                    setDefaultCode(res.fileContent)
+    let dir = []
+    const getSelectedFile = async (file: any, socket: Socket) => {
+        dir.push(file)
+        let path = ""
+        dir.map(x => path += `/${x}`)
+        if (path) {
+            socket.emit('searchDir', path, replData[0], (res: { content: { fileContent: string, ext: string }, type: string }, err: any) => {
+                if (err) {
+                    console.log(err)
                 }
-            })
-        }
-        if (socket && file != 'undefined' && type == 'dir') {
-            socket.emit('get-selected-dir', { replName: replData[0], dir: file }, (res: { status: string, dirContent: string }, err: any) => {
-                const newFile = new Map(files)
-                const getFile = files.get(file)
-                if (getFile) {
-                    getFile.children.push(res.dirContent)
-                    getFile.status = 'open'
-                    console.log(getFile)
-                    newFile.set(file, {
-                        extension: '',
-                        children: getFile.children,
-                        status: getFile.status,
-                        type: 'dir'
-                    })
-                    setFile(newFile)
+                
+                if (res.type == 'file' && typeof res.content.fileContent == 'string') {
+                    selectFile([languages[res.content.ext], file])
+                    setDefaultCode(res.content.fileContent)
+                    return
                 }
+                if (res.type == 'dir') {
+                    const dummyFiles = files
+                    dummyFiles[file]['children'] = res.content
+                    setFile(dummyFiles)
+                }
+                // const dummyFiles = new Map(files)
+                // dummyFiles.set(file, res.content)
+                // const a = dummyFiles.get(file)
+                // console.log(a.find((x: any) => x == '.bin'))
             })
         }
     }
@@ -113,12 +97,21 @@ export default function Repl() {
 
     const callDebounce = debounce((text: any) => { socket?.emit('code-editor-change', { replName: replData[0], file: selectedFile[1], code: text }) })
 
-    // const renderFolder = (name: string) => {
-    //     if (files.get(name)?.status == 'open') {
-    //         return ()
-    //     }
+    const renderFolder = (name: string) => {
+        if (files[name].status == 'open' && files[name].children) {
+            console.log("object")
+            return files[name].children.map((tab: any) => {
+                console.log(tab.file)
+                return (
+                    <div>
+                        <Button value={tab.file} onClick={async (e: any) => {
+                        }} className='cursor-pointer w-full text-start justify-start bg-transparent py-1 h-fit rounded-none text-sm'>{tab.file}</Button>
+                    </div>
+                )
+            })
+        }
 
-    // }
+    }
 
     return (
         <div className='flex flex-col py-4'>
@@ -138,42 +131,29 @@ export default function Repl() {
                 </div>
             </div>
             <div className='flex w-full my-2'>
-                <div className='flex flex-col w-[12%] items-start'>
+                <div className='flex flex-col w-[12%] items-start overflow-y-scroll h-[80vh]'>
                     <div className='mx-4 flex justify-between mb-1'>
-                        {console.log(files)}
                         <p>Files</p>
                     </div>
-                    {Array.from(files.entries()).length > 0 && Array.from(files.entries()).map(([name, value]: any) => {
+                    {Object.keys(files).length > 0 && Object.keys(files).map((name: string) => {
                         return (
                             <div>
                                 <Button value={name} onClick={async (e: any) => {
-                                    if (files.get(e.target.value)?.type == 'dir' && socket) {
-                                        getSelectedFile(e.target.value, socket, 'dir')
+                                    if (files[name].ext == 'dir' && socket) {
+                                        const dummyFiles = files
+                                        files[name]['status'] = 'open'
+                                        setFile(dummyFiles)
+                                        getSelectedFile(e.target.value, socket)
                                         return
                                     }
-                                    selectFile([languages[e.target.value.split('.')[1]], e.target.value])
                                     if (socket) {
-                                        getSelectedFile(e.target.value, socket, 'file')
+                                        getSelectedFile(e.target.value, socket)
                                     }
-                                }} className='cursor-pointer w-full text-start justify-start bg-transparent py-1 h-fit rounded-none text-sm'>{name}</Button>
-                                {files.get(name)?.type == 'dir' ? files.get(name)?.children?.map(tab => {
-                                    console.log("object")
-                                    return (
-                                        <div>
-                                            <Button value={tab} onClick={async (e: any) => {
-                                                if (files.get(e.target.value)?.type == 'dir' && socket) {
-                                                    getSelectedFile(e.target.value, socket, 'dir')
-                                                }
-                                                selectFile([languages[e.target.value.split('.')[1]], e.target.value])
-                                                if (socket) {
-                                                    getSelectedFile(e.target.value, socket, 'file')
-                                                }
-                                            }} className='cursor-pointer w-full text-start justify-start bg-transparent py-1 h-fit rounded-none text-sm'>{tab}</Button>
-                                            {/* {files.get(tab)?.type == 'dir' ? renderFolder(tab) : null} */}
-                                        </div>
-                                    )
-                                })
-                                    : null}
+                                }
+                                } className='cursor-pointer w-full text-start justify-start bg-transparent py-1 h-fit rounded-none text-sm'>{name}</Button>
+                                <div className='ml-2'>
+                                    {files[name].ext == 'dir' && renderFolder(name)}
+                                </div>
                             </div>
                         )
                     })}

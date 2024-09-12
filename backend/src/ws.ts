@@ -2,6 +2,7 @@ import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
 import { copyDir, createDir, readDir, readFile, updateFile } from "./fs";
 import { Terminal } from "./pty";
+import fs from "fs/promises";
 
 const terminalManager = new Terminal();
 let currentDir = ''
@@ -28,12 +29,19 @@ export const initWs = (server: HttpServer) => {
     });
 
     socket.on("get-dir", async (name, callback) => {
-      currentDir = name
-      const dir = await readDir(`./user-files/${name}`);
-      callback({
-        dir,
-        status: "ok",
-      });
+      const path = `./user-files/${name}`
+      const isDir = (await fs.stat(path)).isDirectory()
+      if (path) {
+        const content = await readDir(path)
+        callback({content, type: 'dir'})
+        return
+      }
+      // currentDir = name
+      // const dir = await readDir(`./user-files/${name}`);
+      // callback({
+      //   dir,
+      //   status: "ok",
+      // });
     });
 
     socket.on("code-editor-change", async ({ replName, file, code }) => {
@@ -53,6 +61,22 @@ export const initWs = (server: HttpServer) => {
         })
       }
     })
+
+    socket.on('searchDir', async(path: string, replName ,callback) => {
+      const dirContent = `./user-files/${replName}${path}`
+      try {
+        const isDir = await (await fs.stat(dirContent)).isDirectory()
+        if (isDir) {
+          const content = await readDir(dirContent)
+          callback({content, type: 'dir'})
+          return
+        }
+        const content = await readFile(dirContent)
+        callback({content, type: 'file'})
+      } catch (error: any) {
+        callback({err: error.message})
+      }
+    } )
 
     socket.on(
       "get-selected-file-code",
