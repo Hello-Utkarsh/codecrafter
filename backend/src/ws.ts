@@ -33,10 +33,10 @@ export const initWs = (server: HttpServer) => {
       const isDir = (await fs.stat(path)).isDirectory()
       if (path) {
         const content = await readDir(path)
+        currentDir = path
         callback({content, type: 'dir'})
         return
       }
-      // currentDir = name
       // const dir = await readDir(`./user-files/${name}`);
       // callback({
       //   dir,
@@ -45,6 +45,7 @@ export const initWs = (server: HttpServer) => {
     });
 
     socket.on("code-editor-change", async ({ replName, file, code }) => {
+      // console.log(replName, file, code)
       await updateFile(`./user-files/${replName}/${file}`, code);
     });
 
@@ -93,7 +94,7 @@ export const initWs = (server: HttpServer) => {
     socket.on("requestTerminal", async (dir) => {
       terminalManager.createPty("abc", `./user-files/${dir}/`, async (data: any, id: any) => {
         socket.emit('terminal-response', data)
-        const dirContent = await readDir(`./user-files/${currentDir}/`)
+        const dirContent = await readDir(`./${currentDir}/`)
         socket.emit('dir-change', dirContent)
       });
     });

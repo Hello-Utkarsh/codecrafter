@@ -10,10 +10,10 @@ import TerminalComponent from '@/components/TerminalComp';
 export default function Repl() {
     const languages: any = { '.js': 'javascript', '.py': 'python', '.json': 'json' }
     const [defaultCode, setDefaultCode] = useState('')
-    const [searchDir, setSearchDir] = useState<string[]>([])
+    const [render, setRender] = useState(true)
     // all the fetched files of the repl
     const [files, setFile]: any = useState([])
-    const [sidebarDir, setSideBar]: any = useState()
+    const [sidebarDir, setSideBar]: any = useState([])
     const [selectedFile, selectFile] = useState<string[]>([])
 
     const [socket, setSocket] = useState<Socket | null>(null)
@@ -21,18 +21,17 @@ export default function Repl() {
 
     useEffect(() => {
         const newSocket: any = io('http://localhost:3000')
-        // newSocket.on('dir-change', (dir: any) => {
-        //     const updatedFiles = new Map(files);
-        //     dir.forEach((file: any) => {
-        //         if (!updatedFiles.has(file.file)) {
-        //             updatedFiles.set(file.file, {
-        //                 extension: languages[file.file.split('.')[1]],
-        //                 type: file.fileType,
-        //             });
-        //         }
-        //     });
-        //     setFile(updatedFiles);
-        // })
+        newSocket.on('dir-change', (dir: any) => {
+            const dummyFiles: any = []
+            dir.map((x: { file: string, fileType: string }) => {
+                if (x.fileType == 'dir') {
+                    dummyFiles[x.file] = { ext: 'dir', status: 'close', children: [] }
+                    return
+                }
+                dummyFiles[x.file] = { ext: x.fileType }
+            })
+            setFile(dummyFiles)
+        })
         setSocket(newSocket)
         getDir(newSocket)
     }, [])
@@ -56,17 +55,34 @@ export default function Repl() {
         }
     }
 
+    const recSearch = (path: any, content: any, data?: any,) => {
+        if (path.length == 1) {
+            const dir = path[0]
+            const a = { [path[0]]: { ext: 'dir', status: 'open', children: content } }
+            console.log(a)
+            return a
+        }
+        const a = { [path[0]]: { ext: 'dir', status: 'open', children: [recSearch(path.slice(1), content, data), ...data[path[0]].children.filter(x => x.file != path[1])] } }
+        return a
+    }
+
+    const [a, seta]: any = useState()
     let dir = []
     const getSelectedFile = async (file: any, socket: Socket) => {
-        dir.push(file)
         let path = ""
-        dir.map(x => path += `/${x}`)
+        if (sidebarDir.length > 0) {
+            sidebarDir.map((x: any) => path += `/${x}/${file}`)
+        }
+        if (sidebarDir.length == 0) {
+            path += `/${file}`
+        }
+        console.log(path)
         if (path) {
             socket.emit('searchDir', path, replData[0], (res: { content: { fileContent: string, ext: string }, type: string }, err: any) => {
                 if (err) {
                     console.log(err)
                 }
-                
+
                 if (res.type == 'file' && typeof res.content.fileContent == 'string') {
                     selectFile([languages[res.content.ext], file])
                     setDefaultCode(res.content.fileContent)
@@ -74,13 +90,12 @@ export default function Repl() {
                 }
                 if (res.type == 'dir') {
                     const dummyFiles = files
-                    dummyFiles[file]['children'] = res.content
+                    const x: any = recSearch(path.split('/').slice(1), res.content, dummyFiles)
+                    dummyFiles[Object.keys(x)[0]] = x[Object.keys(x)[0]]
                     setFile(dummyFiles)
+                    setRender(prev => !prev)
+                    seta(res.content)
                 }
-                // const dummyFiles = new Map(files)
-                // dummyFiles.set(file, res.content)
-                // const a = dummyFiles.get(file)
-                // console.log(a.find((x: any) => x == '.bin'))
             })
         }
     }
@@ -95,22 +110,71 @@ export default function Repl() {
         }
     }
 
-    const callDebounce = debounce((text: any) => { socket?.emit('code-editor-change', { replName: replData[0], file: selectedFile[1], code: text }) })
-
-    const renderFolder = (name: string) => {
-        if (files[name].status == 'open' && files[name].children) {
-            console.log("object")
-            return files[name].children.map((tab: any) => {
-                console.log(tab.file)
-                return (
-                    <div>
-                        <Button value={tab.file} onClick={async (e: any) => {
-                        }} className='cursor-pointer w-full text-start justify-start bg-transparent py-1 h-fit rounded-none text-sm'>{tab.file}</Button>
-                    </div>
-                )
-            })
+    const callDebounce = debounce((text: any) => {
+        let path = ""
+        if (sidebarDir.length > 0) {
+            sidebarDir.map((x: any) => path += `/${x}/${selectedFile[1]}`)
         }
+        if (sidebarDir.length == 0) {
+            path += `/${selectedFile[1]}`
+        }
+        socket?.emit('code-editor-change', { replName: replData[0], file: selectedFile[1], code: text })
+    })
 
+    const renderFolder = (files: any) => {
+        if (files.status == 'open' && files.children) {
+            return (
+                <>
+                    {files.children.map((tab: any) => {
+                        return (
+                            <div>
+                                <Button value={tab.file} onClick={async (e: any) => {
+                                    if (files.ext == 'dir' && socket) {
+                                        getSelectedFile(e.target.value, socket)
+                                        return
+                                    }
+                                    if (socket) {
+                                        getSelectedFile(e.target.value, socket)
+                                    }
+                                }} className='cursor-pointer w-full text-start justify-start bg-transparent py-1 h-fit rounded-none text-sm'>{tab.file || Object.keys(tab)[0]}</Button>
+                                <div className='ml-2'>
+                                    {files.ext == 'dir' ? renderFolder(tab) : null}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </>
+            )
+        }
+        if (files.file && files.fileType) {
+            return
+        }
+        if (Object.keys(files)[0] != 'file' && Object.keys(files)[1] != 'filetype') {
+            if (files[Object.keys(files)[0]].status == 'open') {
+                return (
+                    <>
+                        {files[Object.keys(files)[0]].children.map((x: any) => {
+                            return (
+                                <div>
+                                    <Button value={x.file} onClick={async (e: any) => {
+                                        if (files.ext == 'dir' && socket) {
+                                            getSelectedFile(e.target.value, socket)
+                                            return
+                                        }
+                                        if (socket) {
+                                            getSelectedFile(e.target.value, socket)
+                                        }
+                                    }} className='cursor-pointer w-full text-start justify-start bg-transparent py-1 h-fit rounded-none text-sm'>{x.file}</Button>
+                                    <div className='ml-2'>
+                                        {files.ext == 'dir' ? renderFolder(x) : null}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </>
+                )
+            }
+        }
     }
 
     return (
@@ -139,10 +203,15 @@ export default function Repl() {
                         return (
                             <div>
                                 <Button value={name} onClick={async (e: any) => {
-                                    if (files[name].ext == 'dir' && socket) {
+                                    if (files[name].status == 'open') {
                                         const dummyFiles = files
-                                        files[name]['status'] = 'open'
+                                        dummyFiles[name].status = 'close'
                                         setFile(dummyFiles)
+                                        setRender(prev => !prev)
+                                        return
+                                    }
+                                    if (files[name].ext == 'dir' && socket) {
+                                        setSideBar((prev: string) => [...prev, e.target.value])
                                         getSelectedFile(e.target.value, socket)
                                         return
                                     }
@@ -152,7 +221,7 @@ export default function Repl() {
                                 }
                                 } className='cursor-pointer w-full text-start justify-start bg-transparent py-1 h-fit rounded-none text-sm'>{name}</Button>
                                 <div className='ml-2'>
-                                    {files[name].ext == 'dir' && renderFolder(name)}
+                                    {files[name].ext == 'dir' ? renderFolder(files[name]) : null}
                                 </div>
                             </div>
                         )
