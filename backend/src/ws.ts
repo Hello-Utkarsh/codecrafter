@@ -37,15 +37,14 @@ export const initWs = (server: HttpServer) => {
         callback({content, type: 'dir'})
         return
       }
-      // const dir = await readDir(`./user-files/${name}`);
-      // callback({
-      //   dir,
-      //   status: "ok",
-      // });
+      const dir = await readDir(`./user-files/${name}`);
+      callback({
+        dir,
+        status: "ok",
+      });
     });
 
     socket.on("code-editor-change", async ({ replName, file, code }) => {
-      // console.log(replName, file, code)
       await updateFile(`./user-files/${replName}/${file}`, code);
     });
 
@@ -64,7 +63,8 @@ export const initWs = (server: HttpServer) => {
     })
 
     socket.on('searchDir', async(path: string, replName ,callback) => {
-      const dirContent = `./user-files/${replName}${path}`
+      const dirContent = `./user-files/${replName}/${path}`
+      console.log(dirContent)
       try {
         const isDir = await (await fs.stat(dirContent)).isDirectory()
         if (isDir) {
@@ -92,7 +92,7 @@ export const initWs = (server: HttpServer) => {
     );
 
     socket.on("requestTerminal", async (dir) => {
-      terminalManager.createPty("abc", `./user-files/${dir}/`, async (data: any, id: any) => {
+      terminalManager.createPty("abc",dir, async (data: any, id: any) => {
         socket.emit('terminal-response', data)
         const dirContent = await readDir(`./${currentDir}/`)
         socket.emit('dir-change', dirContent)
@@ -100,6 +100,7 @@ export const initWs = (server: HttpServer) => {
     });
 
     socket.on("terminal-exec", async (command: string, replData: string[]) => {
+      console.log(command)
       terminalManager.writePty("abc", command);
     });
   });
