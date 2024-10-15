@@ -34,6 +34,9 @@ export default function Repl() {
         })
         setSocket(newSocket)
         getDir(newSocket)
+        window.addEventListener('beforeunload', () => {
+            console.log("object")
+        })
     }, [])
 
     const getDir = async (newSocket: Socket) => {
