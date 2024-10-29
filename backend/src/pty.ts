@@ -19,14 +19,19 @@ export class Terminal {
     const ptyProcess = pty.spawn(shell, [], {
       name: "xterm-color",
       cols: 80,
-      cwd:  `./user-files/${path}/`,
+      cwd: `./user-files/${path}/`,
     });
-    await ptyProcess.write(`docker build -t ${path} .\r`)
-    await ptyProcess.write(`docker run -d -v .:/app --name ${path} ${path} tail -f /dev/null\r`)
-    await ptyProcess.write(`docker exec -it ${path} /bin/sh\r`)
+
+    let isExecuted = false;
+
+    ptyProcess.write(`docker build -t ${path} .\r`);
+    ptyProcess.write(
+      `docker container create -it --name ${path} ${path} tail -f /dev/null\r`
+    );
+    ptyProcess.write(`docker start ${path}\r`);
+    ptyProcess.write(`docker exec -it ${path} sh\r`);
 
     ptyProcess.on("data", (data: string) => onData(data, ptyProcess.pid));
-
 
     this.sessions[id] = {
       terminal: ptyProcess,

@@ -64,7 +64,6 @@ export const initWs = (server: HttpServer) => {
 
     socket.on('searchDir', async(path: string, replName ,callback) => {
       const dirContent = `./user-files/${replName}/${path}`
-      console.log(dirContent)
       try {
         const isDir = await (await fs.stat(dirContent)).isDirectory()
         if (isDir) {
@@ -100,7 +99,6 @@ export const initWs = (server: HttpServer) => {
     });
 
     socket.on("terminal-exec", async (command: string, replData: string[]) => {
-      console.log(command)
       terminalManager.writePty("abc", command);
     });
   });

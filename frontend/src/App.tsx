@@ -1,3 +1,4 @@
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'
 import './App.css'
 import AppBar from './components/AppBar'
 import { Button } from './components/ui/button'
@@ -11,7 +12,10 @@ function App() {
         <h1 className='text-6xl font-bold'>Code, Create, Conquer</h1>
         <p className='text-pretty w-[40rem] text-center mt-3 text-gray-400 text-xl'>Your browser-based IDE for Python and JavaScript. Write, run, and share code in seconds. Experience the future of coding today.</p>
         <div className='flex mt-3'>
-          <Button className='bg-gray-800 hover:bg-gray-900 mx-3'>Get Started <span className='ml-2 text-xl mb-1'>&rarr;</span></Button>
+          <SignInButton>
+            <Button className='bg-gray-800 hover:bg-gray-900 mx-3'>
+              Get Started <span className='ml-2 text-xl mb-1'>&rarr;</span></Button>
+          </SignInButton>
           <Button className='bg-gray-300 hover:bg-gray-400 text-gray-800 mx-3'>Learn More</Button>
         </div>
         <div className='flex items-center mt-2'>
@@ -26,17 +30,17 @@ function App() {
         <h1 className='text-5xl text-blue-400 font-bold'>Features</h1>
         <div className='flex justify-between mt-14'>
           <span className='w-3/12'>
-            <img src="/public/browser.png" className='h-10 mx-auto' alt="" />
+            <img src="/browser.png" className='h-10 mx-auto' alt="" />
             <h3 className='text-2xl font-bold text-center mt-2'>Browser-based IDE</h3>
             <p className='text-gray-400 text-center mt-1'>Code from anywhere, anytime. No installation required.</p>
           </span>
           <span className='w-3/12'>
-            <img src="/public/laptop.png" className='h-10 mx-auto' alt="" />
+            <img src="/laptop.png" className='h-10 mx-auto' alt="" />
             <h3 className='text-2xl font-bold text-center mt-2'>Python & JavaScript Support</h3>
             <p className='text-gray-400 text-center mt-1'>Write and run code in two of the most popular programming languages.</p>
           </span>
           <span className='w-3/12'>
-            <img src="/public/bolt.png" className='h-10 mx-auto' alt="" />
+            <img src="/bolt.png" className='h-10 mx-auto' alt="" />
             <h3 className='text-2xl font-bold text-center mt-2'>Instant Execution</h3>
             <p className='text-gray-400 text-center mt-1'>See your code come to life instantly with our lightning-fast execution engine.</p>
           </span>
