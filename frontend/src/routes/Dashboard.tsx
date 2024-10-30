@@ -29,6 +29,7 @@ import { useEffect, useState } from 'react'
 import { redirect, useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
 import { Socket } from 'node_modules/socket.io-client/build/cjs'
+import { useUser } from '@clerk/clerk-react'
 
 
 export default function Dashboard() {
@@ -38,10 +39,17 @@ export default function Dashboard() {
   const [socket, setSocket] = useState<Socket>()
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate();
-  
+  const user = useUser()
+
   useEffect(() => {
-    const newSocket: any = io('http://localhost:3000')
-    setSocket(newSocket)
+    if (user.user?.id) {
+      const newSocket: any = io('http://localhost:3000')
+      setSocket(newSocket)
+      newSocket.emit('createUserDir', user.user?.id)
+      newSocket.on('createUserDirErr', (createDir: any) => {
+        toast('some problem occured, please try reloading')
+      })
+    }
   }, [])
 
   const frameworks = [
@@ -56,17 +64,16 @@ export default function Dashboard() {
   ]
 
   const Submit = () => {
-    socket?.emit('create-repl', [replName, replType])
+    socket?.emit('create-repl', [replName, replType, user.user?.id])
     socket?.on('dir-exist', (is_created) => {
       if (is_created == 'EEXIST') {
         toast("looks like a repl with this name already exist")
         return
-      } else{
+      } else {
         console.log("some problem occured")
       }
     })
     socket?.on('success-repl-creation', () => {
-      console.log(replName, replType)
       return navigate(`/repl/${replName}/${replType}`)
     })
   }
@@ -130,7 +137,7 @@ export default function Dashboard() {
                     </Command>
                   </PopoverContent>
                 </Popover>
-                <Button onClick={() => Submit()} className='border border-white bg-black' style={{marginTop: '8px'}}>Create</Button>
+                <Button onClick={() => Submit()} className='border border-white bg-black' style={{ marginTop: '8px' }}>Create</Button>
               </DialogHeader>
             </DialogContent>
           </Dialog>
@@ -151,7 +158,7 @@ export default function Dashboard() {
             <p>Description</p>
             <img className='h-4 cursor-pointer' src="/delete.png" alt="" />
           </div>
-          <Toaster className='bg-black text-white'/>
+          <Toaster className='bg-black text-white' />
         </div>
       </div>
     </div>

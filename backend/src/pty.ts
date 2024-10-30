@@ -9,10 +9,12 @@ export class Terminal {
   async createPty(
     id: string,
     path: string,
+    userName: string,
     onData: (data: string, id: string) => void
   ) {
     const os = require("os");
     const pty = require("node-pty");
+    console.log(userName)
 
     const shell = os.platform() === "win32" ? "powershell.exe" : "bash";
 
@@ -24,14 +26,21 @@ export class Terminal {
 
     let isExecuted = false;
 
-    ptyProcess.write(`docker build -t ${path} .\r`);
+    ptyProcess.write(`docker build -t ${userName}-${path} .\r`);
     ptyProcess.write(
-      `docker container create -it --name ${path} ${path} tail -f /dev/null\r`
+      `docker container create -it --name ${userName}-${path} ${path} tail -f /dev/null\r`
     );
-    ptyProcess.write(`docker start ${path}\r`);
-    ptyProcess.write(`docker exec -it ${path} sh\r`);
+    ptyProcess.write(`docker start ${userName}-${path}\r`);
+    ptyProcess.write(`docker exec -it ${userName}-${path} sh\r`);
 
-    ptyProcess.on("data", (data: string) => onData(data, ptyProcess.pid));
+    ptyProcess.on("data", (data: string) => {
+      if (data.includes("/app #")) {
+        isExecuted = true
+      }
+      if (isExecuted) {
+        onData(data, ptyProcess.pid);
+      }
+    });
 
     this.sessions[id] = {
       terminal: ptyProcess,

@@ -3,10 +3,12 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css'
 import { Socket } from 'socket.io-client';
+import { useUser } from '@clerk/clerk-react';
 
-export default function TerminalComponent({ newSocket, replData }: {newSocket: Socket | any, replData: string[]}) {
+export default function TerminalComponent({ newSocket, replData, user }: { newSocket: Socket | any, replData: string[], user: any }) {
     let command = ''
     const terminalRef: any = useRef()
+    
     const OPTIONS_TERM = {
         useStyle: true,
         screenKeys: true,
@@ -17,11 +19,10 @@ export default function TerminalComponent({ newSocket, replData }: {newSocket: S
         }
     };
     useEffect(() => {
-        if (!terminalRef.current || !newSocket || !terminalRef || terminalRef.current.childNodes.length > 0) {
+        if (!terminalRef.current || !user.user?.id || !newSocket || !terminalRef || terminalRef.current.childNodes.length > 0) {
             return
         }
-        console.log(newSocket, replData)
-        newSocket.emit("requestTerminal", replData[0]);
+        newSocket.emit("requestTerminal", replData[0], user.user?.id);
         newSocket.on("terminal", terminalHandler)
         const fitAddon = new FitAddon();
         const term = new Terminal(OPTIONS_TERM);
@@ -40,7 +41,7 @@ export default function TerminalComponent({ newSocket, replData }: {newSocket: S
                 newSocket?.emit('terminal-exec', `${command}\r`, replData)
                 term.write('\b \b')
                 command = ''
-                command += command.slice(0,command.length-2)
+                command += command.slice(0, command.length - 2)
                 return
             }
             if (key.key == '\r') {

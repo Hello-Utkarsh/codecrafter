@@ -1,11 +1,21 @@
 import fs from "fs/promises";
 import path from "path";
 
-export const createDir = async (name: string) => {
+export const createUserDir = async(userName: string) => {
   try {
-    const createdDir = await fs.mkdir(`./user-files/${name}`);
+    const createDir = await fs.mkdir(`./user-files/${userName}`)
     return 'success'
   } catch (error: any) {
+    return error.message
+  }
+}
+
+export const createDir = async (name: string, userName: string) => {
+  try {
+    const createdDir = await fs.mkdir(`./user-files/${userName}/${name}`);
+    return 'success'
+  } catch (error: any) {
+    console.log(error)
     return error.code
   }
 };

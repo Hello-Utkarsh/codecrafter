@@ -1,11 +1,12 @@
 import { Editor } from '@monaco-editor/react';
 import { useEffect, useRef, useState } from 'react';
-import { useLoaderData } from 'react-router-dom'
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'
+import { useLoaderData, useNavigate } from 'react-router-dom'
+import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react'
 import { io } from "socket.io-client";
 import { Socket } from 'node_modules/socket.io-client/build/cjs';
 import { Button } from '@/components/ui/button';
 import TerminalComponent from '@/components/TerminalComp';
+import AppBar from '@/components/AppBar';
 
 export default function Repl() {
     const languages: any = { '.js': 'javascript', '.py': 'python', '.json': 'json' }
@@ -15,10 +16,11 @@ export default function Repl() {
     const [files, setFile]: any = useState([])
     const [sidebarDir, setSideBar]: any = useState([])
     const [selectedFile, selectFile] = useState<string[]>([])
-
+    
     const [socket, setSocket] = useState<Socket | null>(null)
     const replData: any = useLoaderData()
-
+    const user = useUser()
+    
     useEffect(() => {
         const newSocket: any = io('http://localhost:3000')
         newSocket.on('dir-change', (dir: any) => {
@@ -66,16 +68,16 @@ export default function Repl() {
         }
         if (path.length == 1 && status == 'close') {
             console.log(data, path[0])
-            const dummyfiles = (data.children || data[path[0]].children).filter(x => Object.keys(x)[0] == path[0])
+            const dummyfiles = (data.children || data[path[0]].children).filter((x: any) => Object.keys(x)[0] == path[0])
             const newDummyfile = {[path[0]]: {fileType: dummyfiles[0][path[0]].fileType, status: status, children: dummyfiles[0][path[0]].children}}
             console.log(newDummyfile)
             return newDummyfile
         }
 
-        const nestedData = data[path[0]] || data.children?.filter(x => Object.keys(x)[0] == path[0])[0][path[0]]
+        const nestedData = data[path[0]] || data.children?.filter((x: any) => Object.keys(x)[0] == path[0])[0][path[0]]
         const nestedPath = path.slice(1)
         console.log(data, "received", nestedData, "passed")
-        const dummyFiles: any = { [path[0]]: { fileType: 'dir', status: 'open', children: [recSearch(nestedPath, status, content, nestedData), ...nestedData.children.filter(x => ((x.file || Object.keys(x)[0]) != path[1]))] } }
+        const dummyFiles: any = { [path[0]]: { fileType: 'dir', status: 'open', children: [recSearch(nestedPath, status, content, nestedData), ...nestedData.children.filter((x: any) => ((x.file || Object.keys(x)[0]) != path[1]))] } }
         return dummyFiles
     }
 
@@ -136,7 +138,7 @@ export default function Repl() {
             const newPath = path.slice(1)
             return (
                 <>
-                    {(nestedfiles.children || nestedfiles[path[0]].children).map(x => {
+                    {(nestedfiles.children || nestedfiles[path[0]].children).map((x: any) => {
                         return (
                             <div>
                                 <Button value={x.file} onClick={(e: any) => {
@@ -173,7 +175,8 @@ export default function Repl() {
 
     return (
         <div className='flex flex-col py-4'>
-            <div className='flex justify-between items-center px-6 my-2'>
+            <AppBar/>
+            {/* <div className='flex justify-between items-center px-6 my-2'>
                 <div className='flex'>
                     <p className='mx-2 hover:cursor-pointer'>Home</p>
                     <p className='mx-2'>{replData[0]}</p>
@@ -187,7 +190,7 @@ export default function Repl() {
                         <UserButton />
                     </SignedIn>
                 </div>
-            </div>
+            </div> */}
             <div className='flex w-full my-2'>
                 <div className='flex flex-col w-[12%] items-start overflow-y-scroll h-[80vh]'>
                     <div className='mx-4 flex justify-between mb-1'>
@@ -238,7 +241,7 @@ export default function Repl() {
                         callDebounce(value)
                     }}
                 />
-                <TerminalComponent newSocket={socket} replData={replData} />
+                <TerminalComponent newSocket={socket} replData={replData} user={user}/>
             </div>
         </div>
     )

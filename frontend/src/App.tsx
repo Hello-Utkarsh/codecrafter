@@ -1,9 +1,22 @@
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'
+import { SignInButton, useSession } from '@clerk/clerk-react'
 import './App.css'
 import AppBar from './components/AppBar'
 import { Button } from './components/ui/button'
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 function App() {
+
+  const navigate = useNavigate()
+  const session = useSession()
+
+  // useEffect(() => {
+  useEffect(() => {
+    if (session.isSignedIn) {
+      navigate('/dashboard');
+    }
+  }, [session.isSignedIn, navigate]);
+  // }, [])
 
   return (
     <div className="">
@@ -59,28 +72,36 @@ function App() {
             <p className='mt-4'><span className='text-blue-400 text-4xl font-bold'>$0</span>/month</p>
             <p className='mt-4'>Python & JavaScript support</p>
             <p className='mt-2'>5 projects</p>
-            <Button className='mt-4 w-full'>Get Started<span className='ml-2 text-xl mb-1'>&rarr;</span></Button>
+            <SignInButton>
+              <Button className='mt-4 w-full'>Get Started<span className='ml-2 text-xl mb-1'>&rarr;</span></Button>
+            </SignInButton>
           </div>
           <div className='bg-gray-800 rounded-lg py-5 px-6 w-96 border-2 border-blue-400'>
             <h3 className='text-2xl font-bold'>Pro</h3>
             <p className='mt-4'><span className='text-blue-400 text-4xl font-bold'>$9</span>/month</p>
             <p className='mt-4'>Python & JavaScript support</p>
             <p className='mt-2'>15 projects</p>
-            <Button className='mt-4 w-full'>Get Started<span className='ml-2 text-xl mb-1'>&rarr;</span></Button>
+            <SignInButton>
+              <Button className='mt-4 w-full'>Get Started<span className='ml-2 text-xl mb-1'>&rarr;</span></Button>
+            </SignInButton>
           </div>
           <div className='bg-gray-800 rounded-lg py-5 px-6 w-96'>
             <h3 className='text-2xl font-bold'>Enterprise</h3>
             <p className='mt-4'><span className='text-blue-400 text-4xl font-bold'>Custom</span></p>
             <p className='mt-4'>Python & JavaScript support</p>
             <p className='mt-2'>Unlimited projects</p>
-            <Button className='mt-4 w-full'>Get Started<span className='ml-2 text-xl mb-1'>&rarr;</span></Button>
+            <SignInButton>
+              <Button className='mt-4 w-full'>Get Started<span className='ml-2 text-xl mb-1'>&rarr;</span></Button>
+            </SignInButton>
           </div>
         </div>
       </section>
       <footer className='py-36 flex flex-col'>
         <h1 className='text-5xl text-blue-400 mx-auto text-center font-bold'>Ready to Start Coding?</h1>
         <p className='text-gray-400 text-center mt-5 text-xl'>Join thousands of developers who are already using our platform<br />to bring their ideas to life.</p>
-        <Button className='mx-auto mt-3 bg-gray-800 hover:bg-gray-900'>SignIn</Button>
+        <SignInButton>
+          <Button className='mx-auto mt-3 bg-gray-800 hover:bg-gray-900'>SignIn</Button>
+        </SignInButton>
       </footer>
     </div>
   )

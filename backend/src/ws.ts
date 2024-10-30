@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
-import { copyDir, createDir, readDir, readFile, updateFile } from "./fs";
+import { copyDir, createDir, createUserDir, readDir, readFile, updateFile } from "./fs";
 import { Terminal } from "./pty";
 import fs from "fs/promises";
 
@@ -15,10 +15,18 @@ export const initWs = (server: HttpServer) => {
   });
 
   io.on("connection", async (socket: Socket) => {
+    socket.on('createUserDir', async(userName: string) => {
+      if (userName) {
+        const createDir = await createUserDir(userName)
+        if (createDir != 'success') {
+          socket.emit('createUserDirErr', createDir)
+        }
+      }
+    })
     socket.on("create-repl", async (replData) => {
       if (replData) {
-        const [name, type] = replData;
-        const is_created = await createDir(name);
+        const [name, type, userName] = replData;
+        const is_created = await createDir(name, userName);
         if (is_created != "success") {
           socket.emit("dir-exist", is_created);
           return;
@@ -90,8 +98,9 @@ export const initWs = (server: HttpServer) => {
       }
     );
 
-    socket.on("requestTerminal", async (dir) => {
-      terminalManager.createPty("abc",dir, async (data: any, id: any) => {
+    socket.on("requestTerminal", async (dir, userName) => {
+      console.log(userName)
+      terminalManager.createPty("abc",dir, userName ,async (data: any, id: any) => {
         socket.emit('terminal-response', data)
         const dirContent = await readDir(`./${currentDir}/`)
         socket.emit('dir-change', dirContent)

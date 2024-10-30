@@ -15,23 +15,23 @@ const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App/>,
+    element: <App />,
   },
   {
     path: '/dashboard',
-    element: <Dashboard/>
+    element: <Dashboard />
   },
   {
     path: "/repl/:replID/:type",
-    element: <Repl/>,
-    loader: ({ params }: any) => {return [params.replID, params.type]}
+    element: <Repl />,
+    loader: ({ params }: any) => { return [params.replID, params.type] }
   }
 ]);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/dashboard">
-    <RouterProvider router={router} />
+      <RouterProvider router={router} />
     </ClerkProvider>
   </StrictMode>
 )
