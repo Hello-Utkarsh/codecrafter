@@ -47,7 +47,11 @@ export default function Dashboard() {
       setSocket(newSocket)
       newSocket.emit('createUserDir', user.user?.id)
       newSocket.on('createUserDirErr', (createDir: any) => {
-        toast('some problem occured, please try reloading')
+        if (createDir == 'EEXIST') {
+          return
+        } else {
+          toast("some problem occured")
+        }
       })
     }
   }, [])
@@ -66,6 +70,7 @@ export default function Dashboard() {
   const Submit = () => {
     socket?.emit('create-repl', [replName, replType, user.user?.id])
     socket?.on('dir-exist', (is_created) => {
+      console.log("perfect")
       if (is_created == 'EEXIST') {
         toast("looks like a repl with this name already exist")
         return

@@ -14,14 +14,13 @@ export class Terminal {
   ) {
     const os = require("os");
     const pty = require("node-pty");
-    console.log(userName)
 
     const shell = os.platform() === "win32" ? "powershell.exe" : "bash";
 
     const ptyProcess = pty.spawn(shell, [], {
       name: "xterm-color",
       cols: 80,
-      cwd: `./user-files/${path}/`,
+      cwd: `./user-files/${userName}/${path}/`,
     });
 
     let isExecuted = false;

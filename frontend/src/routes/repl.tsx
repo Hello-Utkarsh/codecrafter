@@ -16,11 +16,11 @@ export default function Repl() {
     const [files, setFile]: any = useState([])
     const [sidebarDir, setSideBar]: any = useState([])
     const [selectedFile, selectFile] = useState<string[]>([])
-    
+
     const [socket, setSocket] = useState<Socket | null>(null)
     const replData: any = useLoaderData()
     const user = useUser()
-    
+
     useEffect(() => {
         const newSocket: any = io('http://localhost:3000')
         newSocket.on('dir-change', (dir: any) => {
@@ -42,8 +42,8 @@ export default function Repl() {
     }, [])
 
     const getDir = async (newSocket: Socket) => {
-        if (newSocket) {
-            newSocket?.emit('get-dir', replData[0], (res: { content: { file: string, fileType: string }[], type: string }, err: any) => {
+        if (newSocket && user.user?.id) {
+            newSocket?.emit('get-dir', replData[0], user.user.id, (res: { content: { file: string, fileType: string }[], type: string }, err: any) => {
                 if (files) {
                     const dummyFiles: any = []
                     res.content.map((x: { file: string, fileType: string }) => {
@@ -69,7 +69,7 @@ export default function Repl() {
         if (path.length == 1 && status == 'close') {
             console.log(data, path[0])
             const dummyfiles = (data.children || data[path[0]].children).filter((x: any) => Object.keys(x)[0] == path[0])
-            const newDummyfile = {[path[0]]: {fileType: dummyfiles[0][path[0]].fileType, status: status, children: dummyfiles[0][path[0]].children}}
+            const newDummyfile = { [path[0]]: { fileType: dummyfiles[0][path[0]].fileType, status: status, children: dummyfiles[0][path[0]].children } }
             console.log(newDummyfile)
             return newDummyfile
         }
@@ -82,8 +82,8 @@ export default function Repl() {
     }
 
     const getSelectedFile = async (path: any, socket: Socket, fileType?: string) => {
-        if (path) {
-            socket.emit('searchDir', path, replData[0], (res: { content: { fileContent: string, fileType: string }, type: string }, err: any) => {
+        if (path && user.user?.id) {
+            socket.emit('searchDir', path, replData[0], user.user.id, (res: { content: { fileContent: string, fileType: string }, type: string }, err: any) => {
                 if (err) {
                     console.log(err)
                 }
@@ -144,12 +144,12 @@ export default function Repl() {
                                 <Button value={x.file} onClick={(e: any) => {
                                     if (socket) {
                                         if (x[Object.keys(x)[0]].status == 'open') {
-                                            const dummyFiles = {...files}
+                                            const dummyFiles = { ...files }
                                             console.log(dummyFiles)
                                             const newDummyfile = recSearch(sidebarDir, 'close', "", dummyFiles)
                                             dummyFiles[Object.keys(newDummyfile)[0]] = newDummyfile[Object.keys(newDummyfile)[0]]
                                             const oldPath = sidebarDir
-                                            const newPath =oldPath.splice(0,oldPath.indexOf(Object.keys(x)[0]))
+                                            const newPath = oldPath.splice(0, oldPath.indexOf(Object.keys(x)[0]))
                                             setSideBar(newPath)
                                             setFile(dummyFiles)
                                             return
@@ -175,22 +175,7 @@ export default function Repl() {
 
     return (
         <div className='flex flex-col py-4'>
-            <AppBar/>
-            {/* <div className='flex justify-between items-center px-6 my-2'>
-                <div className='flex'>
-                    <p className='mx-2 hover:cursor-pointer'>Home</p>
-                    <p className='mx-2'>{replData[0]}</p>
-                </div>
-                <button className='px-3 py-1 bg-green-600 rounded-md hover:bg-green-700 flex items-center'><img className='h-3 mr-2' src="/run.png" alt="" />Run</button>
-                <div className='flex bg-gray-100 px-2 py-1 rounded-md text-black font-medium hover:bg-gray-300'>
-                    <SignedOut>
-                        <SignInButton />
-                    </SignedOut>
-                    <SignedIn>
-                        <UserButton />
-                    </SignedIn>
-                </div>
-            </div> */}
+            <AppBar />
             <div className='flex w-full my-2'>
                 <div className='flex flex-col w-[12%] items-start overflow-y-scroll h-[80vh]'>
                     <div className='mx-4 flex justify-between mb-1'>
@@ -241,7 +226,7 @@ export default function Repl() {
                         callDebounce(value)
                     }}
                 />
-                <TerminalComponent newSocket={socket} replData={replData} user={user}/>
+                <TerminalComponent newSocket={socket} replData={replData} user={user} />
             </div>
         </div>
     )
