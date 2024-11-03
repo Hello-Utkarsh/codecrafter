@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [replName, setReplName] = useState('')
   const [socket, setSocket] = useState<Socket>()
   const [error, setError] = useState<string | null>(null)
+  const [userRepl, setUserRepls] = useState<{ file: string, fileType: string, docType: string }[]>()
   const navigate = useNavigate();
   const user = useUser()
 
@@ -46,7 +47,9 @@ export default function Dashboard() {
       const newSocket: any = io('http://localhost:3000')
       setSocket(newSocket)
       newSocket.emit('createUserDir', user.user?.id)
-      newSocket.on('createUserDirErr', (createDir: any) => {
+      newSocket.on('createUserDirErr', (createDir: any, userDir: any) => {
+        console.log(userDir)
+        setUserRepls(userDir)
         if (createDir == 'EEXIST') {
           return
         } else {
@@ -66,6 +69,20 @@ export default function Dashboard() {
       label: "Python",
     },
   ]
+
+  const deleteRepl = async (name: string) => {
+    socket?.emit('delete-repl', user.user?.id, name, (res: any, err: any) => {
+      console.log(res, err)
+      if (res == 'success') {
+        const dummyRepl = userRepl
+        dummyRepl?.filter((x) => x.file != name)
+        setUserRepls(dummyRepl)
+        toast('Successfully Deleted')
+      } else {
+        toast(err)
+      }
+    })
+  }
 
   const Submit = () => {
     socket?.emit('create-repl', [replName, replType, user.user?.id])
@@ -89,10 +106,10 @@ export default function Dashboard() {
       <div className='px-16 py-6'>
         <div className='flex justify-between mt-4'>
           <h2 className='text-2xl font-medium tracking-wide'>Your Repls</h2>
-
           <Dialog>
             <DialogTrigger className='flex bg-gray-100 px-2 py-1 rounded-md text-black font-medium hover:bg-gray-300'>Create Repl</DialogTrigger>
             <DialogContent className='bg-black'>
+              <DialogTitle className='text-center'>Create Repl</DialogTitle>
               <DialogHeader>
                 <div className='mb-2 flex flex-col'>
                   <label htmlFor="" className='mb-1'>Name</label>
@@ -108,7 +125,7 @@ export default function Dashboard() {
                     >
                       {replType
                         ? frameworks.find((framework) => framework.value === replType)?.label
-                        : "Create Repl"}
+                        : "Repl Type"}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -147,22 +164,22 @@ export default function Dashboard() {
             </DialogContent>
           </Dialog>
         </div>
-        <div className='w-full mt-8 border-2 border-gray-300 px-5 rounded-md divide-y-2 divide-gray-300'>
-          <div className='flex justify-between mx-auto items-center py-6'>
-            <p>Name</p>
-            <p className='max-w-[50%] truncate ...'>Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam eius recusandae nam sunt facilis officia veritatis sequi possimus hic rem.</p>
-            <img className='h-4 cursor-pointer' src="/delete.png" alt="" />
-          </div>
-          <div className='flex justify-between mx-auto items-center py-6'>
-            <p>Name</p>
-            <p>Description</p>
-            <img className='h-4 cursor-pointer' src="/delete.png" alt="" />
-          </div>
-          <div className='flex justify-between mx-auto items-center py-6'>
-            <p>Name</p>
-            <p>Description</p>
-            <img className='h-4 cursor-pointer' src="/delete.png" alt="" />
-          </div>
+        <div className='w-full mt-8 rounded-md grid grid-cols-8'>
+          {(userRepl && userRepl.length > 0) ? userRepl.map((x) => {
+            const icon = x.docType == 'node' ? '/jsicon.svg' : 'pythonicon.png'
+            return (
+              <div className='flex flex-col justify-between items-center py-3 px-3 w-32 border-2 border-gray-300 rounded-md cursor-pointer' onClick={() => navigate(`/repl/${x.file}/${x.docType}`)}>
+                <img src={icon} className='h-10 my-1' alt="" />
+                <div className='flex'>
+                  <p className='mr-3'>{x.file}</p>
+                  <p className='cursor-pointer' onClick={(e) => {
+                    e.stopPropagation()
+                    deleteRepl(x.file)
+                  }}>x</p>
+                </div>
+              </div>
+            )
+          }) : <p className='text-center my-2'>You have no repls</p>}
           <Toaster className='bg-black text-white' />
         </div>
       </div>

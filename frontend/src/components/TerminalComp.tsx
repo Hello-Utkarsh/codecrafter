@@ -38,14 +38,14 @@ export default function TerminalComponent({ newSocket, replData, user }: { newSo
         term.onKey((key, ev): any => {
             term.write(key.key);
             if (key.domEvent.key == 'Backspace') {
-                newSocket?.emit('terminal-exec', `${command}\r`, replData)
+                newSocket?.emit('terminal-exec', `${command}\r`, replData, user.user?.id)
                 term.write('\b \b')
                 command = ''
                 command += command.slice(0, command.length - 2)
                 return
             }
             if (key.key == '\r') {
-                newSocket?.emit('terminal-exec', `${command}\r`, replData)
+                newSocket?.emit('terminal-exec', `${command}\r`, replData, user.user?.id)
                 console.log(command)
                 term.write('\n')
                 command = ''

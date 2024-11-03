@@ -129,7 +129,7 @@ export default function Repl() {
         if (sidebarDir.length == 0) {
             path += `/${selectedFile[1]}`
         }
-        socket?.emit('code-editor-change', { replName: replData[0], file: selectedFile[1], code: value })
+        socket?.emit('code-editor-change', { replName: replData[0], file: selectedFile[1], code: value, userName: user.user?.id })
     })
 
     // recursive function which takes file details and display the sub folders

@@ -1,11 +1,19 @@
 import { Server, Socket } from "socket.io";
 import { Server as HttpServer } from "http";
-import { copyDir, createDir, createUserDir, readDir, readFile, updateFile } from "./fs";
+import {
+  copyDir,
+  createDir,
+  createUserDir,
+  deleteRepl,
+  readDir,
+  readFile,
+  updateFile,
+} from "./fs";
 import { Terminal } from "./pty";
 import fs from "fs/promises";
 
 const terminalManager = new Terminal();
-let currentDir = ''
+let currentDir = "";
 
 export const initWs = (server: HttpServer) => {
   const io = new Server(server, {
@@ -15,14 +23,43 @@ export const initWs = (server: HttpServer) => {
   });
 
   io.on("connection", async (socket: Socket) => {
-    socket.on('createUserDir', async(userName: string) => {
+    // create user sepcific folders
+    socket.on("createUserDir", async (userName: string) => {
       if (userName) {
-        const createDir = await createUserDir(userName)
-        if (createDir != 'success') {
-          socket.emit('createUserDirErr', createDir)
+        const createDir = await createUserDir(userName);
+        const userDir = await readDir(`./user-files/${userName}`);
+        const updatedArray = await Promise.all(
+          (userDir ?? []).map(async (x: any, _) => {
+            const docContent = await readFile(
+              `./user-files/${userName}/${x.file}/Dockerfile`
+            );
+            const docType = docContent?.fileContent
+              .split("\n")[0]
+              .split(" ")[1]
+              .split(":")[0];
+            return { ...x, docType: docType };
+          })
+        );
+        if (createDir != "success") {
+          socket.emit("createUserDirErr", createDir, updatedArray);
         }
       }
-    })
+    });
+
+    socket.on(
+      "delete-repl",
+      async (userName: string, repl: string, callback: any) => {
+        const del = await deleteRepl(userName, repl);
+        console.log(del);
+        if (del == "success") {
+          console.log("inside success")
+          callback(del, null);
+        } else {
+          callback(null, del);
+        }
+      }
+    );
+
     socket.on("create-repl", async (replData) => {
       if (replData) {
         const [name, type, userName] = replData;
@@ -37,12 +74,12 @@ export const initWs = (server: HttpServer) => {
     });
 
     socket.on("get-dir", async (name, userName, callback) => {
-      const path = `./user-files/${userName}/${name}`
+      const path = `./user-files/${userName}/${name}`;
       if (path) {
-        const content = await readDir(path)
-        currentDir = path
-        callback({content, type: 'dir'})
-        return
+        const content = await readDir(path);
+        currentDir = path;
+        callback({ content, type: "dir" });
+        return;
       }
       const dir = await readDir(`./user-files/${userName}/${name}`);
       callback({
@@ -51,45 +88,58 @@ export const initWs = (server: HttpServer) => {
       });
     });
 
-    socket.on("code-editor-change", async ({ replName, file, code, userName }) => {
-      await updateFile(`./user-files/${userName}/${replName}/${file}`, code);
-    });
-
-    socket.on('get-selected-dir', async({replName, dir, userName}, callback) => {
-      try {
-        const dirContent = await readDir(`./user-files/${userName}/${replName}/${dir}`)
-        callback({
-          status: 'ok',
-          dirContent
-        })
-      } catch (error) {
-        callback({
-          status: '404'
-        })
+    socket.on(
+      "code-editor-change",
+      async ({ replName, file, code, userName }) => {
+        await updateFile(`./user-files/${userName}/${replName}/${file}`, code);
       }
-    })
+    );
 
-    socket.on('searchDir', async(path: string, replName, userName: string ,callback) => {
-      const dirContent = `./user-files/${userName}/${replName}/${path}`
-      try {
-        const isDir = await (await fs.stat(dirContent)).isDirectory()
-        if (isDir) {
-          const content = await readDir(dirContent)
-          callback({content, type: 'dir'})
-          return
+    socket.on(
+      "get-selected-dir",
+      async ({ replName, dir, userName }, callback) => {
+        try {
+          const dirContent = await readDir(
+            `./user-files/${userName}/${replName}/${dir}`
+          );
+          callback({
+            status: "ok",
+            dirContent,
+          });
+        } catch (error) {
+          callback({
+            status: "404",
+          });
         }
-        const content = await readFile(dirContent)
-        callback({content, type: 'file'})
-      } catch (error: any) {
-        callback({err: error.message})
       }
-    } )
+    );
+
+    socket.on(
+      "searchDir",
+      async (path: string, replName, userName: string, callback) => {
+        const dirContent = `./user-files/${userName}/${replName}/${path}`;
+        try {
+          const isDir = (await fs.stat(dirContent)).isDirectory();
+          if (isDir) {
+            const content = await readDir(dirContent);
+            callback({ content, type: "dir" });
+            return;
+          }
+          const content = await readFile(dirContent);
+          callback({ content, type: "file" });
+        } catch (error: any) {
+          callback({ err: error.message });
+        }
+      }
+    );
 
     socket.on(
       "get-selected-file-code",
       async ({ replName, file, userName }, callback) => {
         // reading the file content of the selected file from the sidebar
-        const fileContent = await readFile(`./user-files/${userName}/${replName}/${file}`);
+        const fileContent = await readFile(
+          `./user-files/${userName}/${replName}/${file}`
+        );
         callback({
           status: "ok",
           fileContent,
@@ -98,13 +148,19 @@ export const initWs = (server: HttpServer) => {
     );
 
     socket.on("requestTerminal", async (dir, userName) => {
-      terminalManager.createPty("abc",dir, userName ,async (data: any, id: any) => {
-        socket.emit('terminal-response', data)
-        const dirContent = await readDir(`./${currentDir}/`)
-        socket.emit('dir-change', dirContent)
-      });
+      terminalManager.createPty(
+        "abc",
+        dir,
+        userName,
+        async (data: any, id: any) => {
+          socket.emit("terminal-response", data);
+          const dirContent = await readDir(`./${currentDir}/`);
+          socket.emit("dir-change", dirContent);
+        }
+      );
     });
 
+    // execute the command in the terminal
     socket.on("terminal-exec", async (command: string, replData: string[]) => {
       terminalManager.writePty("abc", command);
     });

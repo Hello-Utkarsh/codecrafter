@@ -27,9 +27,10 @@ export const copyDir = async (
   // checks if the dir has multiple files and copy the files to the required location
   // fileType: node/python, name: name of the folder in which the base image will be copied to
   try {
-    const copyData: any = await readDir(`./base/${fileType}`);
+    const copyData: any = await readDir(`./base/${fileType}`, true);
     if (copyData && copyData?.length > 1) {
       copyData.map(async (path: any) => {
+        console.log(path.file);
         await fs.copyFile(
           `./base/${fileType}/${path.file}`,
           `./user-files/${userName}/${name}/${path.file}`
@@ -44,11 +45,14 @@ export const copyDir = async (
       await readDir(`./user-files/${userName}`);
     }
   } catch (error: any) {
-    console.log(error.message, 'copyDir');
+    console.log(error.message, "copyDir");
   }
 };
 
-export const readDir = async (path: string): Promise<string[] | undefined> => {
+export const readDir = async (
+  path: string,
+  isCoping?: boolean
+): Promise<string[] | undefined> => {
   // returns all the files/folders in the given location in the
   // form of an array: {file: file name(index.js, main.py etc..), fileType: file/dir}
   try {
@@ -57,10 +61,12 @@ export const readDir = async (path: string): Promise<string[] | undefined> => {
     const dirContent: any = [];
     await Promise.all(
       files.map(async (file) => {
-        const fileType = (await fs.stat(`${path}/${file}`)).isFile()
-          ? "file"
-          : "dir";
-        dirContent.push({ file, fileType });
+        if ((isCoping && file == 'Dockerfile') || file != 'Dockerfile') {
+          const fileType = (await fs.stat(`${path}/${file}`)).isFile()
+            ? "file"
+            : "dir";
+          dirContent.push({ file, fileType });
+        }
       })
     );
     return dirContent;
@@ -86,6 +92,19 @@ export const updateFile = async (path: string, data: string) => {
     return readFile(path);
   } catch (error) {
     console.log(error);
+  }
+};
+
+export const deleteRepl = async (userName: string, repl: string) => {
+  try {
+    console.log(`./user-file/${userName}/${repl}`);
+    const deleteRepl = await fs.rm(`./user-files/${userName}/${repl}`, {
+      recursive: true,
+      force: true,
+    });
+    return "success";
+  } catch (error: any) {
+    return error.message;
   }
 };
 

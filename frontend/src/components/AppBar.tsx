@@ -5,8 +5,6 @@ import { useNavigate } from 'react-router-dom'
 export default function AppBar() {
     const navigate = useNavigate()
     const session = useSession()
-    const user = useUser()
-    console.log(user.user)
     useEffect(() => {
         if (!session.isSignedIn) {
             navigate('/')

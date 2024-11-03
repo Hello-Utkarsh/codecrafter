@@ -25,16 +25,22 @@ export class Terminal {
 
     let isExecuted = false;
 
-    ptyProcess.write(`docker build -t ${userName}-${path} .\r`);
     ptyProcess.write(
-      `docker container create -it --name ${userName}-${path} ${path} tail -f /dev/null\r`
+      `docker build -t ${userName.toLowerCase()}-${path.toLowerCase()} .\r`
     );
-    ptyProcess.write(`docker start ${userName}-${path}\r`);
-    ptyProcess.write(`docker exec -it ${userName}-${path} sh\r`);
+    ptyProcess.write(
+      `docker container create -it --name ${userName.toLowerCase()}-${path.toLowerCase()} -v "$(pwd):/app" ${userName.toLowerCase()}-${path.toLowerCase()} tail -f /dev/null\r`
+    );
+    ptyProcess.write(
+      `docker start ${userName.toLowerCase()}-${path.toLowerCase()}\r`
+    );
+    ptyProcess.write(
+      `docker exec -it ${userName.toLowerCase()}-${path.toLowerCase()} sh\r`
+    );
 
     ptyProcess.on("data", (data: string) => {
       if (data.includes("/app #")) {
-        isExecuted = true
+        isExecuted = true;
       }
       if (isExecuted) {
         onData(data, ptyProcess.pid);
@@ -48,6 +54,10 @@ export class Terminal {
 
   writePty(id: string, data: string) {
     const terminal = this.sessions[id].terminal;
+    if (data == "exit\r" || data == "ls\r") {
+      terminal.write("\r");
+      return;
+    }
     terminal.write(data);
   }
 }
