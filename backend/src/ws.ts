@@ -13,7 +13,6 @@ import { Terminal } from "./pty";
 import fs from "fs/promises";
 
 const terminalManager = new Terminal();
-let currentDir = "";
 
 export const initWs = (server: HttpServer) => {
   const io = new Server(server, {
@@ -23,7 +22,6 @@ export const initWs = (server: HttpServer) => {
   });
 
   io.on("connection", async (socket: Socket) => {
-    // create user sepcific folders
     socket.on("createUserDir", async (userName: string) => {
       if (userName) {
         const createDir = await createUserDir(userName);
@@ -50,9 +48,7 @@ export const initWs = (server: HttpServer) => {
       "delete-repl",
       async (userName: string, repl: string, callback: any) => {
         const del = await deleteRepl(userName, repl);
-        console.log(del);
         if (del == "success") {
-          console.log("inside success")
           callback(del, null);
         } else {
           callback(null, del);
@@ -73,16 +69,15 @@ export const initWs = (server: HttpServer) => {
       }
     });
 
-    socket.on("get-dir", async (name, userName, callback) => {
+    socket.on("get-dir", async (name, userName) => {
       const path = `./user-files/${userName}/${name}`;
       if (path) {
         const content = await readDir(path);
-        currentDir = path;
-        callback({ content, type: "dir" });
+        socket.emit("get-dir-change", { content, type: "dir" });
         return;
       }
       const dir = await readDir(`./user-files/${userName}/${name}`);
-      callback({
+      socket.emit("get-dir-change", {
         dir,
         status: "ok",
       });
@@ -149,20 +144,25 @@ export const initWs = (server: HttpServer) => {
 
     socket.on("requestTerminal", async (dir, userName) => {
       terminalManager.createPty(
-        "abc",
+        `${userName}-${dir}`,
         dir,
         userName,
         async (data: any, id: any) => {
           socket.emit("terminal-response", data);
-          const dirContent = await readDir(`./${currentDir}/`);
+          const dirContent = await readDir(`./user-files/${userName}/${dir}`);
           socket.emit("dir-change", dirContent);
         }
       );
     });
 
     // execute the command in the terminal
-    socket.on("terminal-exec", async (command: string, replData: string[]) => {
-      terminalManager.writePty("abc", command);
-    });
+    socket.on(
+      "terminal-exec",
+      async (command: string, replData: string[], userName: string) => {
+        terminalManager.writePty(`${userName}-${replData[0]}`, command);
+      }
+    );
+    // socket.on("disconnect", () => {
+    // });
   });
 };

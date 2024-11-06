@@ -22,28 +22,26 @@ export default function Repl() {
     const user = useUser()
 
     useEffect(() => {
-        const newSocket: any = io('http://localhost:3000')
-        newSocket.on('dir-change', (dir: any) => {
-            const dummyFiles: any = []
-            dir.map((x: { file: string, fileType: string }) => {
-                if (x.fileType == 'dir') {
-                    dummyFiles[x.file] = { fileType: 'dir', status: 'close', children: [] }
-                    return
-                }
-                dummyFiles[x.file] = { fileType: x.fileType }
+        const userid = user.user?.id
+        if (userid) {
+            const newSocket: any = io(`http://localhost:3000`)
+            newSocket.on('dir-change', (dir: any) => {
+                const dummyFiles: any = []
+                dir.map((x: { file: string, fileType: string }) => {
+                    if (x.fileType == 'dir') {
+                        dummyFiles[x.file] = { fileType: 'dir', status: 'close', children: [] }
+                        return
+                    }
+                    dummyFiles[x.file] = { fileType: x.fileType }
+                })
+                console.log(dummyFiles, user.user?.id, replData)
+                setFile(dummyFiles)
             })
-            setFile(dummyFiles)
-        })
-        setSocket(newSocket)
-        getDir(newSocket)
-        window.addEventListener('beforeunload', () => {
-            console.log("object")
-        })
-    }, [])
-
-    const getDir = async (newSocket: Socket) => {
-        if (newSocket && user.user?.id) {
-            newSocket?.emit('get-dir', replData[0], user.user.id, (res: { content: { file: string, fileType: string }[], type: string }, err: any) => {
+            setSocket(newSocket)
+            if (newSocket) {
+                newSocket?.emit('get-dir', replData[0], user.user?.id)
+            }
+            newSocket.on('get-dir-change', (res: { content: { file: string, fileType: string }[], type: string }, err: any) => {
                 if (files) {
                     const dummyFiles: any = []
                     res.content.map((x: { file: string, fileType: string }) => {
@@ -53,11 +51,19 @@ export default function Repl() {
                         }
                         dummyFiles[x.file] = { fileType: x.fileType }
                     })
+                    console.log(dummyFiles)
                     setFile(dummyFiles)
                     getSelectedFile(res.content[0].file, newSocket)
                 }
             })
+            window.addEventListener('beforeunload', () => {
+                console.log("object")
+            })
         }
+    }, [])
+
+    const getDir = async (newSocket: Socket) => {
+
     }
 
     // recursive function to set new dir in the files
@@ -87,7 +93,6 @@ export default function Repl() {
                 if (err) {
                     console.log(err)
                 }
-                console.log(res)
 
                 // if the response if of type file, set the defaultCode with gets displayed in the editor to the reposnse code
                 if (res.type == 'file' && typeof res.content.fileContent == 'string') {
@@ -174,7 +179,7 @@ export default function Repl() {
     }
 
     return (
-        <div className='flex flex-col py-4'>
+        <div className='flex flex-col'>
             <AppBar />
             <div className='flex w-full my-2'>
                 <div className='flex flex-col w-[12%] items-start overflow-y-scroll h-[80vh]'>

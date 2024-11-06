@@ -43,10 +43,12 @@ export default function Dashboard() {
   const user = useUser()
 
   useEffect(() => {
-    if (user.user?.id) {
-      const newSocket: any = io('http://localhost:3000')
+    const userid = user.user?.id
+    if (userid) {
+      console.log(userid)
+      const newSocket: any = io(`http://localhost:3000`)
       setSocket(newSocket)
-      newSocket.emit('createUserDir', user.user?.id)
+      newSocket.emit('createUserDir', userid)
       newSocket.on('createUserDirErr', (createDir: any, userDir: any) => {
         console.log(userDir)
         setUserRepls(userDir)

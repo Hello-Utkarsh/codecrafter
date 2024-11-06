@@ -30,7 +30,6 @@ export const copyDir = async (
     const copyData: any = await readDir(`./base/${fileType}`, true);
     if (copyData && copyData?.length > 1) {
       copyData.map(async (path: any) => {
-        console.log(path.file);
         await fs.copyFile(
           `./base/${fileType}/${path.file}`,
           `./user-files/${userName}/${name}/${path.file}`
@@ -97,7 +96,6 @@ export const updateFile = async (path: string, data: string) => {
 
 export const deleteRepl = async (userName: string, repl: string) => {
   try {
-    console.log(`./user-file/${userName}/${repl}`);
     const deleteRepl = await fs.rm(`./user-files/${userName}/${repl}`, {
       recursive: true,
       force: true,
