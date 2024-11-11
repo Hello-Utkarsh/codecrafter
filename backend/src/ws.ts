@@ -22,6 +22,8 @@ export const initWs = (server: HttpServer) => {
   });
 
   io.on("connection", async (socket: Socket) => {
+    let userDir = "";
+    let currentDir = "";
     socket.on("createUserDir", async (userName: string) => {
       if (userName) {
         const createDir = await createUserDir(userName);
@@ -148,6 +150,8 @@ export const initWs = (server: HttpServer) => {
         dir,
         userName,
         async (data: any, id: any) => {
+          userDir = userName;
+          currentDir = dir;
           socket.emit("terminal-response", data);
           const dirContent = await readDir(`./user-files/${userName}/${dir}`);
           socket.emit("dir-change", dirContent);
@@ -162,7 +166,10 @@ export const initWs = (server: HttpServer) => {
         terminalManager.writePty(`${userName}-${replData[0]}`, command);
       }
     );
-    // socket.on("disconnect", () => {
-    // });
+    socket.on("disconnect", () => {
+      if (userDir && currentDir) {
+        terminalManager.writePty(`${userDir}-${currentDir}`, `docker stop ${userDir.toLowerCase()}-${currentDir.toLowerCase()}\r`)
+      }
+    });
   });
 };

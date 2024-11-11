@@ -3,7 +3,6 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css'
 import { Socket } from 'socket.io-client';
-import { useUser } from '@clerk/clerk-react';
 
 export default function TerminalComponent({ newSocket, replData, user }: { newSocket: Socket | any, replData: string[], user: any }) {
     let command = ''
@@ -38,10 +37,10 @@ export default function TerminalComponent({ newSocket, replData, user }: { newSo
         term.onKey((key, ev): any => {
             term.write(key.key);
             if (key.domEvent.key == 'Backspace') {
-                newSocket?.emit('terminal-exec', `${command}\r`, replData, user.user?.id)
                 term.write('\b \b')
-                command = ''
-                command += command.slice(0, command.length - 2)
+                // command = ''
+                command = command.slice(0, command.length - 1)
+                console.log(command)
                 return
             }
             if (key.key == '\r') {

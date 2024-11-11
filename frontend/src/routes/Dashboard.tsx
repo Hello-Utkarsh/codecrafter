@@ -17,7 +17,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -26,7 +25,7 @@ import { toast } from "sonner"
 import { cn } from '@/lib/utils'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { redirect, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { io } from 'socket.io-client'
 import { Socket } from 'node_modules/socket.io-client/build/cjs'
 import { useUser } from '@clerk/clerk-react'
@@ -37,7 +36,6 @@ export default function Dashboard() {
   const [replType, setReplType] = useState("")
   const [replName, setReplName] = useState('')
   const [socket, setSocket] = useState<Socket>()
-  const [error, setError] = useState<string | null>(null)
   const [userRepl, setUserRepls] = useState<{ file: string, fileType: string, docType: string }[]>()
   const navigate = useNavigate();
   const user = useUser()
@@ -45,12 +43,10 @@ export default function Dashboard() {
   useEffect(() => {
     const userid = user.user?.id
     if (userid) {
-      console.log(userid)
       const newSocket: any = io(`http://localhost:3000`)
       setSocket(newSocket)
       newSocket.emit('createUserDir', userid)
       newSocket.on('createUserDirErr', (createDir: any, userDir: any) => {
-        console.log(userDir)
         setUserRepls(userDir)
         if (createDir == 'EEXIST') {
           return
@@ -74,7 +70,6 @@ export default function Dashboard() {
 
   const deleteRepl = async (name: string) => {
     socket?.emit('delete-repl', user.user?.id, name, (res: any, err: any) => {
-      console.log(res, err)
       if (res == 'success') {
         const dummyRepl = userRepl
         dummyRepl?.filter((x) => x.file != name)
@@ -89,7 +84,6 @@ export default function Dashboard() {
   const Submit = () => {
     socket?.emit('create-repl', [replName, replType, user.user?.id])
     socket?.on('dir-exist', (is_created) => {
-      console.log("perfect")
       if (is_created == 'EEXIST') {
         toast("looks like a repl with this name already exist")
         return

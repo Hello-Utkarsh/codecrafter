@@ -10,13 +10,11 @@ function App() {
   const navigate = useNavigate()
   const session = useSession()
 
-  // useEffect(() => {
   useEffect(() => {
     if (session.isSignedIn) {
       navigate('/dashboard');
     }
   }, [session.isSignedIn, navigate]);
-  // }, [])
 
   return (
     <div className="">
@@ -59,10 +57,10 @@ function App() {
           </span>
         </div>
       </section>
-      <section className='py-24 px-20'>
+      <section className='py-14 px-20'>
         <h1 className='text-5xl mx-auto text-blue-400 font-bold text-center'>Powerful Dashboard</h1>
-        <p className='text-gray-400 text-center mt-5 text-xl'>Manage all your projects, track your progress, and access powerful tools<br />from a single, intuitive interface.</p>
-        <img src="/laptop.png" className='h-60 mx-auto mt-4' alt="" />
+        <p className='text-gray-400 text-center mt-4 text-xl'>Manage all your projects, track your progress, and access powerful tools<br />from a single, intuitive interface.</p>
+        <img src="/dashboard.png" className='h-[30rem] border-2 border-gray-800 rounded-md mx-auto mt-4 mb-4' alt="" />
       </section>
       <section className='py-24 px-20 bg-gray-900'>
         <h1 className='text-5xl mx-auto text-blue-400 font-bold text-center'>Pricing</h1>

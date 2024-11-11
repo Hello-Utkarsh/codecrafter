@@ -1,7 +1,7 @@
 import { Editor } from '@monaco-editor/react';
-import { useEffect, useRef, useState } from 'react';
-import { useLoaderData, useNavigate } from 'react-router-dom'
-import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from '@clerk/clerk-react'
+import { useEffect, useState } from 'react';
+import { useLoaderData } from 'react-router-dom'
+import { useUser } from '@clerk/clerk-react'
 import { io } from "socket.io-client";
 import { Socket } from 'node_modules/socket.io-client/build/cjs';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,6 @@ export default function Repl() {
                     }
                     dummyFiles[x.file] = { fileType: x.fileType }
                 })
-                console.log(dummyFiles, user.user?.id, replData)
                 setFile(dummyFiles)
             })
             setSocket(newSocket)
@@ -51,20 +50,15 @@ export default function Repl() {
                         }
                         dummyFiles[x.file] = { fileType: x.fileType }
                     })
-                    console.log(dummyFiles)
                     setFile(dummyFiles)
                     getSelectedFile(res.content[0].file, newSocket)
                 }
             })
-            window.addEventListener('beforeunload', () => {
-                console.log("object")
+            window.addEventListener('popstate', () => {
+                newSocket.disconnect()
             })
         }
     }, [])
-
-    const getDir = async (newSocket: Socket) => {
-
-    }
 
     // recursive function to set new dir in the files
     const recSearch = (path: any, status: string, content?: any, data?: any) => {
@@ -73,16 +67,13 @@ export default function Repl() {
             return dummyFiles
         }
         if (path.length == 1 && status == 'close') {
-            console.log(data, path[0])
             const dummyfiles = (data.children || data[path[0]].children).filter((x: any) => Object.keys(x)[0] == path[0])
             const newDummyfile = { [path[0]]: { fileType: dummyfiles[0][path[0]].fileType, status: status, children: dummyfiles[0][path[0]].children } }
-            console.log(newDummyfile)
             return newDummyfile
         }
 
         const nestedData = data[path[0]] || data.children?.filter((x: any) => Object.keys(x)[0] == path[0])[0][path[0]]
         const nestedPath = path.slice(1)
-        console.log(data, "received", nestedData, "passed")
         const dummyFiles: any = { [path[0]]: { fileType: 'dir', status: 'open', children: [recSearch(nestedPath, status, content, nestedData), ...nestedData.children.filter((x: any) => ((x.file || Object.keys(x)[0]) != path[1]))] } }
         return dummyFiles
     }
@@ -107,7 +98,6 @@ export default function Repl() {
                     const nested_path = path.split('/')
                     const x: any = recSearch(path.split('/').splice(1), 'open', res.content, dummyFiles)
                     dummyFiles[Object.keys(x)[0]] = x[Object.keys(x)[0]]
-                    console.log(dummyFiles)
                     setFile(dummyFiles)
                     setRender(prev => !prev)
                 }
@@ -150,7 +140,6 @@ export default function Repl() {
                                     if (socket) {
                                         if (x[Object.keys(x)[0]].status == 'open') {
                                             const dummyFiles = { ...files }
-                                            console.log(dummyFiles)
                                             const newDummyfile = recSearch(sidebarDir, 'close', "", dummyFiles)
                                             dummyFiles[Object.keys(newDummyfile)[0]] = newDummyfile[Object.keys(newDummyfile)[0]]
                                             const oldPath = sidebarDir
@@ -180,7 +169,7 @@ export default function Repl() {
 
     return (
         <div className='flex flex-col'>
-            <AppBar />
+            <AppBar socket={socket}/>
             <div className='flex w-full my-2'>
                 <div className='flex flex-col w-[12%] items-start overflow-y-scroll h-[80vh]'>
                     <div className='mx-4 flex justify-between mb-1'>
@@ -205,7 +194,6 @@ export default function Repl() {
                                         newSidebarDir.forEach((x: any) => path += `/${x}`);
                                         setSideBar(newSidebarDir)
                                         getSelectedFile(path, socket, files[name].fileType)
-                                        // getSelectedFile(e.target.value, socket)
                                         return
                                     }
                                     if (socket) {
